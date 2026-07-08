@@ -22,10 +22,10 @@ kernel-compatibility check before we invest in it:
 |--------|------|------|
 | **CardputerZero** | RPi CM0 (BCM2710A1 quad A53, Linux) + WiFi likely **BCM43436B0** (Pi Zero 2 W family) | **Principal sensing node** — Nexmon CSI in monitor mode (passive, no association) and/or standalone AP |
 | **Tab5** | ESP32-P4 (RISC-V, no radio) + **ESP32-C6** (WiFi 6, via SDIO) | **Processing hub + 5" display**, and/or **secondary CSI node** (C6, Espressif API) |
-| **OnePlus 12** | LTE/5G | **Optional** internet uplink (hotspot) for cloud logging / remote debug — not needed for the sensing loop itself |
+| **Android phone** | LTE/5G | **Optional** internet uplink (hotspot) for cloud logging / remote debug — not needed for the sensing loop itself |
 
 ```
-OnePlus 12 (LTE/5G, hotspot)
+Android phone (LTE/5G, hotspot)
        │ optional — internet uplink only
        ▼
 CardputerZero (Linux, Nexmon CSI)          principal sensing node
