@@ -6,16 +6,22 @@ sensor, and as a 2nd screen with the Zero — so this is upside, not a blocker.*
 
 ## The question
 
-Can the Tab5 capture WiFi CSI *by itself*? The ESP32-P4 has **no WiFi radio** —
-WiFi is provided by an **ESP32-C6** co-processor over the esp-hosted link
-(SDIO). The P4 drives it through `esp_wifi_remote`.
+**The hardware is already there — this is purely a software question.** The Tab5
+ships with an onboard **ESP32-C6-MINI-1U** (Wi-Fi 6 / BT / 802.15.4), soldered to
+the board and wired to the main ESP32-P4 over **SDIO** (esp-hosted). It is NOT a
+third-party add-on. The P4 itself has no WiFi radio and drives the C6 through
+`esp_wifi_remote`. (Confirmed via M5Stack docs + teardown — see Sources.)
 
-- The ESP32-C6 *is* an ESP32-class WiFi chip and supports the CSI API natively
-  (`esp_wifi_set_csi_rx_cb`, `esp_wifi_set_csi_config`) when it runs its own app.
-- The open question is whether those CSI calls — and, crucially, the **raw CSI
-  callback data** — are exposed/forwarded across `esp_wifi_remote`/esp-hosted to
-  the P4. CSI frames are frequent and bulky; historically the hosted interface
-  has not reliably surfaced them.
+So the C6 *is* an ESP32-class WiFi chip that supports the CSI API natively
+(`esp_wifi_set_csi_rx_cb`, `esp_wifi_set_csi_config`) when it runs its own app.
+The only open question is **software**: are those CSI calls — and, crucially, the
+**raw CSI callback buffers** — exposed/forwarded across `esp_wifi_remote` /
+esp-hosted to the P4? CSI frames are frequent and bulky, and historically the
+hosted (SDIO) interface has not reliably surfaced them. That, not the presence of
+a radio, is what gates Tab5 self-sensing.
+
+Sources: M5Stack Tab5 docs (docs.m5stack.com/en/core/Tab5); CNX Software teardown
+confirming ESP32-P4 + ESP32-C6-MINI-1U over SDIO.
 
 ## Checklist (when doing the spike)
 

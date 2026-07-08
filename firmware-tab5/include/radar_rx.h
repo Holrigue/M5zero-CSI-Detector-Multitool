@@ -20,46 +20,64 @@
 // =============================================================================
 class RadarRx {
 public:
+  // Result of feeding one byte to the framing state machine.
+  //   FEED_NOT_MINE : we were hunting for sync and this byte isn't 0xAA — it
+  //                   belongs to some other (ASCII) stream on the same wire, so
+  //                   the caller can route it to a hub/handshake line parser.
+  //   FEED_CONSUMED : byte was part of a (possibly still-incomplete) binary frame.
+  //   FEED_PACKET   : byte completed a CRC-valid packet, decoded into `out`.
+  enum FeedResult { FEED_NOT_MINE, FEED_CONSUMED, FEED_PACKET };
+
   void begin(HardwareSerial& uart, int rxPin, int txPin, uint32_t baud = 115200) {
     _uart = &uart;
     _uart->begin(baud, SERIAL_8N1, rxPin, txPin);
     _st = WAIT_SYNC;
   }
 
-  // Non-blocking. Returns true (once) when a valid packet was decoded into `out`.
+  HardwareSerial* uart() const { return _uart; }
+
+  // Feed a single byte. Lets the caller multiplex this UART between binary
+  // RadarPackets (from the Cardputer / relayed by the hub) and ASCII hub
+  // messages (link B handshake / full-size map feed) on the same wire.
+  FeedResult feed(uint8_t c, RadarPacket& out) {
+    switch (_st) {
+      case WAIT_SYNC:
+        if (c == RADAR_SYNC) { _st = WAIT_LEN; return FEED_CONSUMED; }
+        return FEED_NOT_MINE;                 // not part of a binary frame
+      case WAIT_LEN:
+        // len must equal 12 + n*12 for n in 0..MAX_BLIPS.
+        if (!validLen(c)) { _stats.badLen++; _st = WAIT_SYNC; return FEED_CONSUMED; }
+        _len = c; _idx = 0; _st = PAYLOAD; return FEED_CONSUMED;
+      case PAYLOAD:
+        _buf[_idx++] = c;
+        if (_idx >= _len) _st = CRC_LO;
+        return FEED_CONSUMED;
+      case CRC_LO:
+        _crcRx = c; _st = CRC_HI; return FEED_CONSUMED;
+      case CRC_HI:
+        _crcRx |= (uint16_t)c << 8;
+        _st = WAIT_SYNC;
+        if (radar_crc16(_buf, _len) == _crcRx) {
+          _stats.good++; _lastRxMs = millis();
+          decode(out);
+          return FEED_PACKET;
+        }
+        _stats.badCrc++;
+        return FEED_CONSUMED;
+    }
+    return FEED_CONSUMED;
+  }
+
+  // Convenience: drain the UART, return true (once) on the first packet this
+  // call. Bytes not part of a binary frame are dropped — use feed() directly
+  // (owning the UART read loop yourself) if you need to route those to ASCII.
   bool poll(RadarPacket& out) {
     if (!_uart) return false;
+    bool got = false;
     while (_uart->available()) {
-      uint8_t c = (uint8_t)_uart->read();
-      switch (_st) {
-        case WAIT_SYNC:
-          if (c == RADAR_SYNC) _st = WAIT_LEN;
-          break;
-        case WAIT_LEN:
-          // len must equal 12 + n*12 for n in 0..MAX_BLIPS.
-          if (!validLen(c)) { _stats.badLen++; _st = WAIT_SYNC; break; }
-          _len = c; _idx = 0; _st = PAYLOAD;
-          break;
-        case PAYLOAD:
-          _buf[_idx++] = c;
-          if (_idx >= _len) _st = CRC_LO;
-          break;
-        case CRC_LO:
-          _crcRx = c; _st = CRC_HI;
-          break;
-        case CRC_HI:
-          _crcRx |= (uint16_t)c << 8;
-          _st = WAIT_SYNC;
-          if (radar_crc16(_buf, _len) == _crcRx) {
-            _stats.good++; _lastRxMs = millis();
-            decode(out);
-            return true;
-          }
-          _stats.badCrc++;
-          break;
-      }
+      if (feed((uint8_t)_uart->read(), out) == FEED_PACKET) got = true;
     }
-    return false;
+    return got;
   }
 
   // ---- link C: commands back upstream ----------------------------------------

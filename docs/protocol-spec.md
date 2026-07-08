@@ -98,6 +98,29 @@ One object per line, ~10–20 Hz. The Tab5 rendering code is written against thi
 shape and against link A directly (Phase-5 `-DRADAR_DIRECT`), so both paths feed
 the same scope.
 
+### Hub heartbeat + role auto-switch (need #5)
+
+The Tab5 auto-selects its role (standalone vs. 2nd screen) from what it sees on
+the link — no user action. To make that detection passive and robust, the hub
+emits a **heartbeat/announce** line, distinct from the JSON map data:
+
+```
+RM-HUB v1 <caps...>\n        ; e.g.  RM-HUB v1 brain map
+```
+
+- Any line starting with `RM-HUB` refreshes the Tab5's "hub present" timer.
+- Fresh heartbeat (< 3 s) → Tab5 goes **SECONDARY_DISPLAY**: the Zero is the
+  brain and pushes the full-size scanning map; the Tab5 renders and sends touch
+  back over link C.
+- Heartbeat times out → Tab5 falls back to **PRIMARY** (self-CSI if the C6 spike
+  succeeds, else the Cardputer-fed stream), or **NO_SOURCE** if nothing arrives.
+
+Because `RM-HUB` is ASCII and the binary frames start with `0xAA`, both share one
+UART cleanly: the Tab5's frame parser claims `0xAA…` frames and hands every other
+byte to the line parser (`RadarRx::feed` → `RoleManager::feedAscii`). Heartbeat
+cadence ~1 Hz is plenty. The heartbeat may also travel over WiFi or USB-CDC — the
+transport doesn't matter, only that the announce line arrives.
+
 ---
 
 ## Link C — Tab5 → hub (commands)

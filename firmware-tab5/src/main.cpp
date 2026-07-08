@@ -20,6 +20,7 @@
 
 #include "radar_protocol.h"   // shared wire contract (-I ../shared)
 #include "radar_rx.h"
+#include "role.h"
 
 // ── UART to Cardputer / hub. Confirm the real Tab5 Grove GPIOs in hardware-notes.md.
 #ifndef RADAR_RX_PIN
@@ -33,6 +34,7 @@
 #endif
 
 static RadarRx     gRx;
+static RoleManager gRole;         // need #5: standalone vs 2nd-screen auto-switch
 static RadarPacket gPkt;          // latest decoded packet
 static M5Canvas    gCanvas(&M5.Display);
 static bool        gHavePkt = false;
@@ -132,6 +134,13 @@ static void drawPanel() {
     gCanvas.setTextColor(live ? TFT_GREEN : TFT_RED);
     gCanvas.drawString(live ? "LINK OK" : "NO LINK", px, 55);
 
+    // role (need #5): which brain/source is driving us right now
+    RadarRole role = gRole.current();
+    gCanvas.setTextSize(1);
+    gCanvas.setTextColor(role == ROLE_SECONDARY_DISPLAY ? TFT_ORANGE
+                        : role == ROLE_NO_SOURCE        ? TFT_RED : TFT_GREEN);
+    gCanvas.drawString(RoleManager::name(role), px + 130, 62);
+
     gCanvas.setTextSize(2);
     gCanvas.setTextColor(GY);
     if (gHavePkt) {
@@ -192,6 +201,12 @@ static void render() {
     gCanvas.setTextSize(2);
     gCanvas.setTextColor(present ? TFT_GREEN : TFT_RED);
     gCanvas.drawString(present ? "PRESENCE DETECTED" : "AREA CLEAR", 20, 10);
+    // when the hub is the brain, flag that this is the full-size 2nd screen
+    if (gRole.current() == ROLE_SECONDARY_DISPLAY) {
+        gCanvas.setTextColor(TFT_ORANGE);
+        const char* s = "HUB DRIVES DISPLAY";
+        gCanvas.drawString(s, (W - 300) - gCanvas.textWidth(s) - 20, 10);
+    }
 
     drawScope();
     drawPanel();
@@ -250,9 +265,18 @@ void setup() {
 void loop() {
     M5.update();
 
-    // drain UART; keep the freshest decoded packet
-    RadarPacket p;
-    while (gRx.poll(p)) { gPkt = p; gHavePkt = true; }
+    // Drain the UART once, routing each byte: binary RadarPackets go to the
+    // frame parser; everything else is the hub's ASCII stream (link B heartbeat
+    // / future full-size map feed) and drives the role state machine (need #5).
+    if (HardwareSerial* u = gRx.uart()) {
+        while (u->available()) {
+            uint8_t c = (uint8_t)u->read();
+            RadarPacket p;
+            RadarRx::FeedResult r = gRx.feed(c, p);
+            if (r == RadarRx::FEED_PACKET)      { gPkt = p; gHavePkt = true; gRole.notePacket(); }
+            else if (r == RadarRx::FEED_NOT_MINE) gRole.feedAscii(c);
+        }
+    }
 
     // touch
     if (M5.Touch.isEnabled()) {
