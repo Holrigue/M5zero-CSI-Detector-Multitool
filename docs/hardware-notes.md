@@ -28,6 +28,43 @@ that must be checked against the real hardware before trusting it.
   - `RADAR_TX_PIN = 17`
 - Has PSRAM → full-screen 16-bit canvas is fine (`gCanvas.setPsram(true)`).
 
+### Keyboard options for the Tab5 (need #3, standalone use)
+
+The Tab5 has no built-in keyboard, but off-the-shelf modules exist — no custom
+hardware needed:
+
+- **Tab5 Keyboard** (official, recommended): 70-key physical keyboard made *for*
+  the Tab5, plugs into **Ext.Port1**, talks **I2C** + a dedicated interrupt pin
+  for low-latency key events. Plug-and-play; use the `m5stack/M5Unit-KEYBOARD`
+  library. Also does USB-HID modes (Tab5-as-keyboard to a PC/phone). Best fit for
+  a self-contained Tab5 device.
+- **Unit CardKB / CardKB2** (mini): I2C over Grove (CardKB addr `0x5F`). CardKB2
+  adds UART / BLE-HID / ESP-NOW modes. Smaller, good if the Tab5 Keyboard is too
+  big for the enclosure.
+
+Note the transport: these use **I2C** (Ext.Port1 / Grove-I2C), which leaves a
+separate **Grove-UART** free for a CSI-sensor link if one is used.
+
+## Compute comparison — Tab5 vs CardputerZero (not the same class)
+
+Physical size ≠ compute: the Tab5 is bigger because of its 5" screen + battery,
+not its silicon. The tiny CardputerZero is the more powerful *computer*.
+
+| | Tab5 (ESP32-P4 + C6) | CardputerZero (Pi CM0) |
+|---|---|---|
+| Class | **microcontroller** (high-end) | **application processor** (SoC) |
+| CPU | 2× RISC-V ~400 MHz (+ LP core) | **4× Cortex-A53 ~1 GHz** (≈ Pi Zero 2W) |
+| RAM | 32 MB PSRAM | **512 MB** LPDDR2 |
+| OS | firmware / FreeRTOS (no OS) | **full Linux** |
+| Storage | 16 MB flash | microSD 32 GB |
+| Strengths | MIPI display, camera, **real-time I/O**, low power, instant-on | **multitasking, Python, light ML, networking, logging** |
+
+Takeaway: for raw compute / multitasking / RAM / software, the **CardputerZero
+wins clearly**; the **Tab5 is a specialised display/real-time MCU**. They're
+complementary, not comparable — hence Zero = brain, Tab5 = screen. (And why
+neither is an *easy* CSI source: the Zero has power but no CSI API; the Tab5 has
+a CSI-capable ESP32-C6 but no OS.)
+
 ## CardputerZero (RPi CM0, hub) — not yet in hand
 
 - WiFi chip: Cypress **CYW43459** (no working CSI today — see
