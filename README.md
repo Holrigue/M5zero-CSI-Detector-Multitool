@@ -1,7 +1,7 @@
-# radar-multi — CSI Human-Presence Radar (Tab5-centric)
+# M5Zero CSI Detector Multitool
 
-A portable "human radar" that senses people through walls-of-air using **WiFi
-Channel State Information (CSI)**.
+A portable WiFi **Channel State Information (CSI)** human-presence radar —
+**Tab5-centric**, with the CardputerZero as an optional future upgrade.
 
 > **Direction (decided 2026-07-08): Tab5-centric.** The **Tab5 is the whole
 > device** — brain + display + touch + keyboard, all firmware. It runs standalone
