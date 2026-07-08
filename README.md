@@ -1,4 +1,4 @@
-# M5Zero CSI Detector Multitool
+# Tab5 CSI Detector Multitool
 
 A portable WiFi **Channel State Information (CSI)** human-presence radar —
 **Tab5-centric**, with the CardputerZero as an optional future upgrade.
