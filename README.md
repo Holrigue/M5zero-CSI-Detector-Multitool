@@ -1,112 +1,117 @@
 # Tab5 CSI Detector Multitool
 
-A **portable, device-free WiFi sensing kit** — detect human presence/motion from
-the way a body perturbs **WiFi Channel State Information (CSI)**, no camera,
-**passive** by default (no mandatory association to any target network).
+A **portable, device-free WiFi sensing kit** — detect human presence/motion (and,
+with a model, vitals) from how a body perturbs **WiFi Channel State Information
+(CSI)**. No camera, **passive** by default.
 
-> **Scope & ethics (read [`docs/scope-and-safety.md`](docs/scope-and-safety.md)).**
-> DIY security-research / skills project, developed and tested **only on Gab's own
-> hardware and network**. Passive sensing is the default and is always safe.
-> Traffic generation (probe/ping) is opt-in; **deauthentication frames are a hard
-> red line — never, even in personal dev.** Any future client use happens only
-> under explicit, documented authorization.
+> **Scope & ethics — read [`docs/scope-and-safety.md`](docs/scope-and-safety.md).**
+> DIY security-research project, developed/tested **only on Gab's own hardware and
+> network**. Passive sensing is the default. Traffic generation is opt-in;
+> **deauth frames are a hard red line — never.** Client use only under explicit,
+> documented authorization.
 
-## Direction (updated 2026-07-08 — supersedes the earlier "Tab5-centric" note)
+## Direction (updated 2026-07-08 — build on RuView)
 
-The CardputerZero is a Raspberry Pi CM0 (full Linux), **not** an ESP32 — so it
-runs the **Nexmon** CSI path, not the Espressif API. The project is now a
-**two-node sensing kit**, with the Nexmon feasibility explicitly gated by a
-kernel-compatibility check before we invest in it:
+Rather than reinvent the CSI pipeline, we **build on
+[`ruvnet/ruview`](https://github.com/ruvnet/ruview)** (MIT) — a mature WiFi-CSI
+sensing engine (ESP32 node firmware + Rust inference server + pretrained models),
+the same engine the [Ragnar/RuSense](https://github.com/PierreGode/Ragnar) project
+integrates. Full analysis + what we take: [`research/prior-art-ruview.md`](research/prior-art-ruview.md).
 
-| Device | Chip | Role |
-|--------|------|------|
-| **CardputerZero** | RPi CM0 (BCM2710A1 quad A53, Linux) + WiFi likely **BCM43436B0** (Pi Zero 2 W family) | **Principal sensing node** — Nexmon CSI in monitor mode (passive, no association) and/or standalone AP |
-| **Tab5** | ESP32-P4 (RISC-V, no radio) + **ESP32-C6** (WiFi 6, via SDIO) | **Processing hub + 5" display**, and/or **secondary CSI node** (C6, Espressif API) |
-| **Android phone** | LTE/5G | **Optional** internet uplink (hotspot) for cloud logging / remote debug — not needed for the sensing loop itself |
+**Single-node first.** Multi-node ESP32 mesh (fusion for people-count/positioning/
+pose) is an **optional Phase 2**.
 
 ```
-Android phone (LTE/5G, hotspot)
-       │ optional — internet uplink only
-       ▼
-CardputerZero (Linux, Nexmon CSI)          principal sensing node
-   AP and/or STA · monitor-mode capture (passive) or probe/ping (opt-in)
-       │  own local WiFi (the kit's network)
-       ▼
-Tab5 (ESP32-P4 + C6)                        hub · dashboard · secondary CSI
-   processing + classification + 5" display; optional complementary C6 capture
+1× ESP32-S3 CSI node (RuView firmware)
+        │ CSI over UDP, on the kit's own 2.4 GHz WiFi
+        ▼
+CardputerZero (Linux)  →  runs the RuView sensing-server (arm64 Docker / binary)
+        │ REST /api/v1/* + WebSocket (:3000), over the kit's local WiFi
+        ▼
+Tab5 (ESP32-P4 + C6)   →  native dashboard client of the RuView API:
+        presence / motion / vitals / heatmap on the 5" screen + touch
+   (optional: an Android phone hotspot for internet uplink — not needed for sensing)
 ```
 
-The sensing loop (CardputerZero ↔ Tab5) needs **no internet** — a fully mobile,
-self-contained kit that touches no existing WiFi at the site.
+| Device | Role |
+|--------|------|
+| **ESP32-S3** (1×) | CSI **sensor node** — RuView firmware, streams CSI over UDP. Cheap (~$9), the most-proven CSI chip. |
+| **CardputerZero** (RPi CM0, Linux) | **Brain** — runs the RuView sensing-server (inference + REST/WS API). Its strength (Linux compute) is finally the right job for it. |
+| **Tab5** (ESP32-P4 + C6) | **Display + touch** — native client of the RuView API on the 5" screen. |
+| **Android phone** | *Optional* LTE/5G uplink (cloud log / remote debug). Not needed for the sensing loop. |
 
-This project reuses ideas/CSI code from
-[`skizzophrenic/Cardputer-CSI-Human-Detector`](https://github.com/skizzophrenic/Cardputer-CSI-Human-Detector)
-(MIT, attribution in [LICENSE](LICENSE)).
+Key consequence: the CardputerZero is the **server**, not the CSI source — so
+**Nexmon is no longer needed** for the main path (it's now a purely optional
+experiment). The earlier "CardputerZero as principal Nexmon node" plan is
+superseded.
 
-## The two CSI implementation families
+## Two paths
 
-CSI can't be read the same way on both chips — this is the core technical split:
+- **Primary — RuView-based** (above): ESP32-S3 node → CardputerZero (RuView
+  server) → Tab5 (RuView client). Best capabilities (presence, motion, vitals,
+  and pose/people-count once multi-node). **Dev with no hardware today:**
+  `docker run -p 3000:3000 ruvnet/wifi-densepose` serves the API on simulated data.
+- **Fallback — our own no-server path**: a direct ESP32→Tab5 UART link using our
+  binary [`RadarPacket`](shared/radar_protocol.h) + on-Tab5 rendering (the
+  `firmware-*` code + role state machine). Hardware-minimal, no Pi, offline — kept
+  as a fallback and learning artifact.
 
-- **Espressif (ESP32-C6 / -S3)** — `esp_wifi_set_csi_config()` + a CSI callback,
-  via ESP-IDF. Runs on the **Tab5's C6** and on a plain ESP32-S3 reference node.
-  ⚠️ Known C6 bug (subcarrier order / L-LTF in the CSI callback):
-  espressif/esp-idf **#14271** — verify it's fixed in the target IDF before
-  building the pipeline on C6. Chip CSI quality ranking: C5 > C6 > C3 ≈ S3 > ESP32.
-- **Broadcom/Cypress (CardputerZero)** — the **Nexmon** firmware patch enables
-  monitor mode (`nexutil -m2`), injection, and native CSI on Linux **without
-  association**. The likely chip **BCM43436B0** is in the Nexmon table but is
-  **kernel-version-picky** (patch targets ~5.10; failures reported on 6.12).
-  See [`research/nexmon-cardputerzero.md`](research/nexmon-cardputerzero.md).
+## Built on / credit
 
-> **Critical-path risk:** the whole "CardputerZero as principal node" plan hinges
-> on Nexmon working on the shipped kernel. **First action on receipt:** check the
-> M5Stack image's exact kernel vs. the Nexmon compatibility table before investing.
+- Engine: **[RuView](https://github.com/ruvnet/ruview)** (MIT, © rUv) — CSI
+  ingestion, inference, pose/vitals, node firmware, pretrained models.
+- Integration reference: **[Ragnar / RuSense](https://github.com/PierreGode/Ragnar)** (MIT).
+- Original inspiration: [`skizzophrenic/Cardputer-CSI-Human-Detector`](https://github.com/skizzophrenic/Cardputer-CSI-Human-Detector) (MIT).
 
-## Passive vs. active
-
-- **Passive (default, always safe):** capture the AP's natural beacons (~10/s).
-  Enough to validate the whole processing chain.
-- **Traffic generation (opt-in, to densify data):** active probe requests, normal
-  ICMP ping. Kept behind an explicit, documented switch in code.
-- **Deauth frames: never.** That crosses into active disruption — a different
-  legal category. Hard red line, enforced by code structure. See scope-and-safety.
+See [LICENSE](LICENSE) for attributions.
 
 ## Layout
 
 ```
-├── shared/radar_protocol.h     # binary CSI-result wire contract (node → Tab5)
-├── firmware-cardputer/         # PlatformIO · ESP32-S3 · reference CSI pipeline (Prototype 1)
-├── firmware-tab5/              # PlatformIO · ESP32-P4 · hub/dashboard + C6 secondary CSI
-├── hub-cardputerzero/          # Linux (Nexmon) principal sensing node — built on hardware receipt
+├── research/
+│   ├── prior-art-ruview.md      # ⭐ what we adopt from RuView/RuSense + how
+│   ├── nexmon-cardputerzero.md  # Nexmon — now optional/experimental only
+│   └── tab5-c6-csi.md           # ESP32-C6 CSI notes + esp-idf #14271
 ├── docs/
-│   ├── scope-and-safety.md     # authorization scope, guardrails, passive/active separation
-│   ├── requirements.md         # sub-needs, decisions, direction history
-│   ├── protocol-spec.md        # node → Tab5 data protocol
-│   ├── hardware-notes.md       # per-device notes, keyboard options, compute comparison
-│   └── enclosure-notes.md      # portable/clamshell enclosure notes (deferred)
-└── research/
-    ├── nexmon-cardputerzero.md # Nexmon on the CM0 (BCM43436B0), kernel-compat gate
-    └── tab5-c6-csi.md          # ESP32-C6 CSI notes + the #14271 bug
+│   ├── scope-and-safety.md      # authorization scope + guardrails
+│   ├── requirements.md          # sub-needs, decisions, direction history
+│   ├── protocol-spec.md         # our fallback wire protocol (RadarPacket)
+│   ├── hardware-notes.md        # per-device notes, keyboard, compute comparison
+│   └── enclosure-notes.md       # portable enclosure (deferred)
+├── shared/ · firmware-cardputer/ · firmware-tab5/   # fallback no-server path
+└── hub-cardputerzero/           # will host the RuView server setup for the CM0
 ```
 
-## Roadmap (concrete next steps)
+## Roadmap
 
-| # | Step | Depends on |
-|---|------|------------|
-| 1 | Verify esp-idf **#14271** (C6 CSI) status on the target IDF version | — |
-| 2 | On CardputerZero receipt: identify exact WiFi chip (`dmesg`/`lsusb`) + kernel; cross-check Nexmon table | hardware |
-| 3 | Clone/study [`espressif/esp-csi`](https://github.com/espressif/esp-csi) as the Tab5/ESP32 pipeline reference | — |
-| 4 | Clone/study [`seemoo-lab/nexmon`](https://github.com/seemoo-lab/nexmon) (`patches/bcm43436b0/...`) for the CM0 pipeline | — |
-| 5 | **Prototype 1** — basic CSI pipeline on a pure **ESP32-S3** (most proven), before porting to C6 | S3 in hand |
-| 6 | **Prototype 2** — Nexmon monitor mode on the CardputerZero, capture frames without association | hardware |
-| 7 | **Integration** — local CardputerZero ↔ Tab5 network; classifier (k-NN / SVM baseline) for presence/motion | both |
-| 8 | **Logging discipline in code from day one** — scope, date, channel, duration per capture | — |
+**Now (no hardware needed):**
 
-Steps 1, 3, 4, 5 are doable now; 2, 6, 7 wait on the CardputerZero.
+| # | Step |
+|---|------|
+| 1 | Run RuView Docker (simulated data); learn the `/api/v1/*` + WS API |
+| 2 | Prototype the **Tab5 RuView client** (M5GFX dashboard: presence/motion/vitals/heatmap) against that API |
+| 3 | Verify esp-idf **#14271** (C6 CSI) on the target IDF |
+
+**With hardware in hand:**
+
+| # | Step | Needs |
+|---|------|-------|
+| 4 | Flash **1× ESP32-S3** with RuView node firmware; provision to the kit WiFi | ESP32-S3 |
+| 5 | Run the **RuView server on the CardputerZero** (arm64); confirm the light path (presence/motion/vitals) fits the CM0 | CardputerZero |
+| 6 | End-to-end: node → CardputerZero → Tab5 client | all three |
+| 7 | Tab5 keyboard input (official Tab5 Keyboard, I2C) → app controls | keyboard |
+
+**Optional / later:**
+
+| # | Step |
+|---|------|
+| P2 | **Multi-node ESP32 mesh** (fusion: people-count / positioning / pose) — one chip type only |
+| — | Adaptive training loop, geofence, monitoring modes, notifications (RuSense-style) |
+| — | Nexmon experiment on the CardputerZero (extra illuminator) |
+| — | 3D-printed portable/clamshell enclosure (Bambu P1S) |
 
 ## Sources
 
-- https://github.com/espressif/esp-csi
-- https://github.com/seemoo-lab/nexmon
+- https://github.com/ruvnet/ruview · https://github.com/PierreGode/Ragnar
+- https://github.com/espressif/esp-csi · https://github.com/seemoo-lab/nexmon
 - https://github.com/espressif/esp-idf/issues/14271
-- https://docs.espressif.com/projects/esp-idf (Wi-Fi / CSI, ESP32-C6)

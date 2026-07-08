@@ -1,9 +1,35 @@
-# Requirements — the sub-needs & the Tab5-centric pivot
+# Requirements — the sub-needs & direction history
 
 This doc records each capability, the decisions taken, an honest feasibility
-read, and where it lands on the roadmap.
+read, and where it lands on the roadmap. Direction has evolved; the **current**
+one is at the top, earlier ones kept for context.
 
-## ⭐ Direction (decided 2026-07-08): Tab5-centric
+## ⭐⭐ CURRENT direction (2026-07-08, latest): build on RuView, single-node
+
+After reviewing the most mature project in this space
+([Ragnar/RuSense](https://github.com/PierreGode/Ragnar), powered by
+[`ruvnet/ruview`](https://github.com/ruvnet/ruview), both MIT), we **build on
+RuView** instead of reinventing the CSI pipeline. Full analysis:
+[`../research/prior-art-ruview.md`](../research/prior-art-ruview.md).
+
+- **CSI sensor = a single ESP32-S3** running RuView's node firmware (UDP CSI).
+- **Brain = CardputerZero** running RuView's Rust sensing-server (inference +
+  REST/WS API). Its Linux compute is finally the right job for it.
+- **Tab5 = a native dashboard client** of the RuView API (presence/motion/vitals/
+  heatmap on the 5" screen + touch).
+- **Single-node first;** multi-node ESP32 mesh (fusion → people-count/positioning/
+  pose) is **optional Phase 2** (one chip type only — never mix S3/C6).
+- **Nexmon on the CardputerZero is no longer needed** for the main path (the Pi is
+  the server, not the CSI source) → demoted to an optional experiment. This
+  answers the previously-open "CSI source" question (→ ESP32-S3 node).
+- Our own `shared/` + `firmware-*` code becomes the **offline no-server fallback**
+  (direct ESP32→Tab5 UART), kept as a hardware-minimal mode + learning artifact.
+
+This supersedes the "Tab5-centric" note below where they conflict (the Tab5 is now
+a client of a Pi-hosted server, not necessarily fully standalone). The Tab5's
+role-adaptive / keyboard work still applies to the client app.
+
+## ⭐ Earlier direction (2026-07-08): Tab5-centric
 
 After weighing complexity and the compute reality (the Tab5's ESP32-P4 is a
 capable display MCU; the CardputerZero is a more powerful Linux computer but adds
