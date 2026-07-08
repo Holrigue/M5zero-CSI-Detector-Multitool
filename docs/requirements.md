@@ -1,9 +1,35 @@
-# Requirements — the four sub-needs
+# Requirements — the sub-needs & the Tab5-centric pivot
 
-The project decomposes into four capabilities. This doc records each one, the
-decisions taken, an honest feasibility read, and where it lands on the roadmap.
-Terminology: **sensor** = Cardputer (ESP32-S3), **hub** = CardputerZero (RPi CM0,
-Linux), **display** = Tab5 (ESP32-P4).
+This doc records each capability, the decisions taken, an honest feasibility
+read, and where it lands on the roadmap.
+
+## ⭐ Direction (decided 2026-07-08): Tab5-centric
+
+After weighing complexity and the compute reality (the Tab5's ESP32-P4 is a
+capable display MCU; the CardputerZero is a more powerful Linux computer but adds
+a whole OS/hub layer and its own CSI dead-end), the project pivots to a
+**single-device, Tab5-centric design**:
+
+- **The Tab5 is the whole device** — brain + display + touch + **keyboard**, all
+  firmware. It runs standalone on hardware in hand.
+- **Keyboard**: add the **official Tab5 Keyboard** (70-key, I2C via Ext.Port1,
+  plug-and-play, `M5Unit-KEYBOARD` lib). This resolves need #3 without any custom
+  hardware. I2C leaves the Grove-UART free for a sensor.
+- **CardputerZero → optional future upgrade**, not a required part. Bring it in
+  later only for Linux logging / advanced calibration / light ML, or as the brain
+  when the Tab5 acts as its 2nd screen (needs #2b/#5 secondary mode). Everything
+  core works without it.
+- **CSI source — the one still-open decision** (needs hardware to settle):
+  1. the **Tab5's own ESP32-C6** (elegant, single device — but CSI must be
+     exposed through `esp_wifi_remote`; unproven, see `../research/tab5-c6-csi.md`), or
+  2. a **small dedicated ESP32 node** wired over Grove-UART (guaranteed; the
+     `firmware-cardputer` code already does exactly this). One extra ~$10 board.
+
+The sections below keep the original per-need analysis; read them through the
+lens of this pivot (the CardputerZero-dependent parts are now "optional/later").
+
+Terminology: **sensor** = an ESP32 CSI node (Tab5's C6, or a dedicated ESP32),
+**hub** = CardputerZero (RPi CM0, Linux, optional), **display/brain** = Tab5.
 
 ---
 

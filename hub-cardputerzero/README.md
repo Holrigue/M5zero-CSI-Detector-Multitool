@@ -1,9 +1,16 @@
-# hub-cardputerzero — DEFERRED until hardware arrives
+# hub-cardputerzero — OPTIONAL future upgrade (not core)
 
-**Do not implement yet.** Per the project brief (§7.5), the Linux hub is not
-built until the CardputerZero (RPi CM0) is in hand (~Nov 2026). Building it now
-would mean guessing at UART device paths, the `G4_I2C/UART_SW` GPIO multiplexing,
-kernel/Python versions, and CM0 throughput — all unknowns that change the design.
+**Status: optional, and not implemented yet.** As of the 2026-07-08 Tab5-centric
+pivot (see [`../docs/requirements.md`](../docs/requirements.md)), the project's
+core device is the Tab5 alone — the CardputerZero is **no longer a required
+part**. Bring it in later only for Linux-side extras: session logging, advanced
+calibration/presets, light ML, or acting as the brain when the Tab5 is used as a
+2nd screen.
+
+Still not built until the CardputerZero (RPi CM0) is in hand (~Nov 2026):
+doing so now would mean guessing at UART device paths, the `G4_I2C/UART_SW` GPIO
+multiplexing, kernel/Python versions, and CM0 throughput — all unknowns that
+change the design.
 
 What is *already decided* (so integration is drop-in when the hardware lands):
 
