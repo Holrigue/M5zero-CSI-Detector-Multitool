@@ -27,7 +27,10 @@
 #define RUVIEW_HOST "127.0.0.1"  // RuView server IP (CardputerZero, or dev Docker box)
 #endif
 #ifndef RUVIEW_PORT
-#define RUVIEW_PORT 3000
+#define RUVIEW_PORT 3000            // HTTP REST
+#endif
+#ifndef RUVIEW_WS_PORT
+#define RUVIEW_WS_PORT 3001         // WebSocket /ws/sensing (Docker maps 3000->3001)
 #endif
 
 static RuViewClient gClient;
@@ -149,9 +152,9 @@ static void render() {
 
   // ── footer ──────────────────────────────────────────────────────────────────
   gCanvas.setTextSize(1); gCanvas.setTextColor(C(110, 120, 130));
-  snprintf(buf, sizeof(buf), "server %s:%d   wifi %s (%d dBm)   poll ok:%lu err:%lu",
-           RUVIEW_HOST, RUVIEW_PORT,
-           WiFi.status() == WL_CONNECTED ? WiFi.SSID().c_str() : "—",
+  snprintf(buf, sizeof(buf), "server %s:%d  ws:%s  wifi %s (%d dBm)  rest ok:%lu err:%lu",
+           RUVIEW_HOST, RUVIEW_PORT, gClient.wsConnected() ? "up" : "down",
+           WiFi.status() == WL_CONNECTED ? WiFi.SSID().c_str() : "-",
            (int)WiFi.RSSI(), (unsigned long)gPollOk, (unsigned long)gPollErr);
   gCanvas.drawString(buf, pad, H - 16);
 
@@ -178,6 +181,7 @@ void setup() {
   Serial.begin(115200);
   wifiConnect();
   gClient.begin(RUVIEW_HOST, RUVIEW_PORT);
+  gClient.beginWs(&gSt, RUVIEW_WS_PORT);   // live frame stream (primary)
 }
 
 void loop() {
@@ -195,19 +199,30 @@ void loop() {
     if (millis() - lastTry > 5000) { lastTry = millis(); wifiConnect(); }
   }
 
-  // poll latest ~5 Hz
-  static uint32_t lastLatest = 0;
-  if (millis() - lastLatest >= 200) {
-    lastLatest = millis();
-    if (gClient.pollLatest(gSt)) { gPollOk++; pushConf(gSt.confidence); }
-    else                          gPollErr++;
+  // live frame stream (primary)
+  gClient.loopWs();
+
+  // REST fallback: only poll /sensing/latest when the WebSocket isn't connected
+  if (!gClient.wsConnected()) {
+    static uint32_t lastLatest = 0;
+    if (millis() - lastLatest >= 1000) {
+      lastLatest = millis();
+      if (gClient.pollLatest(gSt)) gPollOk++; else gPollErr++;
+    }
   }
 
-  // poll vitals ~1 Hz (they update slowly)
+  // poll vitals ~1 Hz (dedicated endpoint; they update slowly)
   static uint32_t lastVitals = 0;
   if (millis() - lastVitals >= 1000) {
     lastVitals = millis();
     gClient.pollVitals(gSt);
+  }
+
+  // sample confidence into the sparkline at a steady cadence (source-agnostic)
+  static uint32_t lastConf = 0;
+  if (millis() - lastConf >= 100) {
+    lastConf = millis();
+    pushConf(RuViewClient::stale(gSt, 3000) ? 0.0f : gSt.confidence);
   }
 
   // render ~20 fps
