@@ -46,7 +46,7 @@ Linux brain (logging, calibration, light ML), not the CSI source.**
 - CSI *on the Zero itself* (Nexmon on the Cypress CYW43459) stays an exploratory
   bonus (Track B) — no known patch, possible reverse engineering, blocked on
   hardware. It must never gate this need. See
-  [`../research/nexmon-cyw43459.md`](../research/nexmon-cyw43459.md).
+  [`../research/nexmon-cardputerzero.md`](../research/nexmon-cardputerzero.md).
 
 **Maps to:** phases 1–2 (sensor, done), 5 (direct proof), 6 (insert hub).
 

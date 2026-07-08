@@ -1,4 +1,18 @@
-# Spike — CSI on the Tab5's ESP32-C6 (self-sensing standalone mode)
+# ESP32-C6 CSI notes + Tab5 self-sensing spike
+
+## Espressif CSI quick facts (applies to the Tab5's C6 and any ESP32 node)
+
+- Chip CSI quality ranking: **C5 > C6 > C3 ≈ S3 > original ESP32.** The C6 is a
+  strong CSI chip; a pure **ESP32-S3** is the most *proven* reference for a first
+  pipeline (Prototype 1) before porting to C6.
+- ⚠️ **Known C6 bug — esp-idf #14271:** wrong subcarrier ordering / L-LTF not
+  reported correctly in the CSI callback. **Check whether it's fixed in the target
+  IDF version before building the pipeline on C6.** If unfixed, prototype on S3.
+- Reference pipeline to study: [`espressif/esp-csi`](https://github.com/espressif/esp-csi)
+  (documents three topologies: 1 ESP32 + router, 2 ESP32 + router, dedicated TX +
+  multiple RX).
+
+## Spike — CSI on the Tab5's ESP32-C6 (self-sensing standalone mode)
 
 **Status: to investigate. Gates need #5 mode 1 (Tab5 as a fully self-contained
 radar) ONLY. If it fails, the Tab5 still works standalone via the Cardputer

@@ -65,14 +65,16 @@ complementary, not comparable — hence Zero = brain, Tab5 = screen. (And why
 neither is an *easy* CSI source: the Zero has power but no CSI API; the Tab5 has
 a CSI-capable ESP32-C6 but no OS.)
 
-## CardputerZero (RPi CM0, hub) — not yet in hand
+## CardputerZero (RPi CM0, principal sensing node) — not yet in hand
 
-- WiFi chip: Cypress **CYW43459** (no working CSI today — see
-  [`../research/nexmon-cyw43459.md`](../research/nexmon-cyw43459.md)).
+- WiFi chip: likely Broadcom/Cypress **BCM43436B0** (Pi Zero 2 W family) — the
+  CSI path is **Nexmon**, kernel-version-picky; see
+  [`../research/nexmon-cardputerzero.md`](../research/nexmon-cardputerzero.md).
+- **CONFIRM on receipt**: exact WiFi chip (`dmesg`/`lsusb`) + `uname -r`, then
+  cross-check the Nexmon compatibility table before investing.
 - **CONFIRM**: native UART reachable without bit-banging the `G4_I2C/UART_SW`
-  GPIO mux (brief §8).
-- **CONFIRM**: comfortable baud ceiling; measure Cardputer→Zero→Tab5 latency —
-  move a hop to local WiFi if UART-chaining is too slow.
+  GPIO mux; comfortable baud. Node↔Tab5 may run over the kit's local WiFi instead
+  of UART if that's simpler/faster.
 
 ## Phase-5 direct wiring (no hub)
 
