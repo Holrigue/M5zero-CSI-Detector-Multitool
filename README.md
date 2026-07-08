@@ -58,18 +58,26 @@ radar-multi/
 
 ## Roadmap
 
-| Phase | What | Hardware | State |
-|-------|------|----------|-------|
-| 1 | Cardputer: drop `ext_panel.h`, keep CSI sensing intact | Cardputer | ✅ done |
-| 2 | Cardputer: `uart_tx.h`, validate packet stream on a serial monitor | Cardputer | ✅ done |
-| 3 | Tab5: M5Unified/M5GFX skeleton, UART rx, basic scope render | Tab5 | ✅ done |
-| 4 | Tab5: touch interactions (tap blip, calibrate, switch view) | Tab5 | ✅ done |
-| 5 | Direct Cardputer ↔ Tab5 UART link (no hub) — end-to-end proof | both | ⚙️ ready to bench-test |
-| 6 | Insert CardputerZero hub in the middle; move calib/logging to Linux | CardputerZero | ⛔ blocked on hw |
-| 7 | (Exploratory) Nexmon CSI for CYW43459 | CardputerZero | ⛔ blocked on hw |
-| 8 | 3D-printed stacked enclosure (Bambu P1S) | printer | ⛔ blocked on hw |
+The work serves four sub-needs (CSI radar + Linux brain · Tab5 second screen ·
+Cardputer keyboard shared to the Tab5/Zero · optional USB-C portable display) —
+see [`docs/requirements.md`](docs/requirements.md) for the decisions and
+feasibility of each.
 
-Phases 1–5 need only the hardware already in hand.
+| Phase | What | Need | Hardware | State |
+|-------|------|------|----------|-------|
+| 1 | Cardputer: drop `ext_panel.h`, keep CSI sensing intact | 1 | Cardputer | ✅ done |
+| 2 | Cardputer: `uart_tx.h`, validate packet stream on a serial monitor | 1 | Cardputer | ✅ done |
+| 3 | Tab5: M5Unified/M5GFX skeleton, UART rx, basic scope render | 2a | Tab5 | ✅ done |
+| 4 | Tab5: touch interactions (tap blip, calibrate, switch view) | 2a | Tab5 | ✅ done |
+| 5 | Direct Cardputer ↔ Tab5 UART link (no hub) — end-to-end proof | 1,2a | both | ⚙️ ready to bench-test |
+| 6 | Cardputer keyboard → Tab5 (event forwarding) + USB-HID to a host | 3 | Cardputer(+Tab5) | ⏳ next up |
+| 7 | Insert CardputerZero hub; move calib/logging to Linux | 1 | CardputerZero | ⛔ blocked on hw |
+| 8 | Tab5 as a generic Linux second monitor (framebuffer stream over WiFi) | 2b | CardputerZero | ⛔ blocked on hw |
+| 9 | (Optional) Tab5 as a streamed portable display for an external source | 4 | — | ⛔ optional |
+| 10 | (Exploratory) Nexmon CSI for CYW43459 | 1(bonus) | CardputerZero | ⛔ blocked on hw |
+| 11 | 3D-printed stacked enclosure (Bambu P1S) | — | printer | ⛔ blocked on hw |
+
+Phases 1–6 need only the hardware already in hand.
 
 ## Quick start
 

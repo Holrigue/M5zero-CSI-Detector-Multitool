@@ -115,8 +115,28 @@ hub can relay them to the Cardputer unchanged:
 | `MODE <name>` | switch view/mode |
 | `PING` | liveness check → `PONG` |
 
-In Phase 5 the Cardputer parses these directly; from Phase 6 the hub is the
-middleman and may translate them.
+In Phase 5 the Cardputer parses these directly; later the hub is the middleman
+and may translate them.
+
+---
+
+## Planned: input events (keyboard bridge — need 3, design only)
+
+The Cardputer's physical keyboard will be shared to the Tab5 (and, via USB-HID,
+to the Zero — see [`requirements.md`](requirements.md) §3). Two transports:
+
+- **To the Zero:** the Cardputer's ESP32-S3 enumerates as a native **USB-HID
+  keyboard** over USB-C. No custom protocol — it's a real keyboard to Linux.
+- **To the Tab5 / hub (over the data link):** key events travel the same
+  direction as `RadarPacket`, so link A needs a way to carry a *second* message
+  type. Current framing has no type discriminator (every `0xAA` frame is a
+  `RadarPacket`). The forward-compatible options, to decide when this is built:
+  1. add a **message-type byte** right after `len` (breaks v1 → `proto_ver = 2`), or
+  2. use a **distinct sync byte** for input frames (e.g. `0xAB`), leaving the
+     `RadarPacket` framing untouched.
+
+  Proposed key-event payload: `{ uint8 type=KEY, uint8 flags(down/up/mods),
+  uint8 keycode }`, CRC-framed like everything else. Not yet on the wire.
 
 ---
 
