@@ -106,6 +106,7 @@ See [LICENSE](LICENSE) for attributions.
 | # | Step |
 |---|------|
 | P2 | **Multi-node ESP32 mesh** (fusion: people-count / positioning / pose) — one chip type only |
+| — | **M5Paper Color as an optional bedside/glanceable panel** — low-power e-ink status + health trends (a thin RuView client; not a Tab5 replacement — see [hardware-notes](docs/hardware-notes.md)) |
 | — | Adaptive training loop, geofence, monitoring modes, notifications (RuSense-style) |
 | — | Nexmon experiment on the CardputerZero (extra illuminator) |
 | — | 3D-printed portable/clamshell enclosure (Bambu P1S) |

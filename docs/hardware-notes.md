@@ -89,3 +89,27 @@ GND ───────────────────────── 
 Build the Tab5 with `-DRADAR_DIRECT=1` (already the default in its
 `platformio.ini`). Common ground between the two devices is mandatory; 3V3 logic
 on both sides, so no level shifting needed.
+
+## Optional module — M5Paper Color as a bedside / glanceable panel
+
+Considered as an alternative main display; **not a Tab5 replacement** (e-ink is
+too slow / no touch for the live dashboard). Instead, logged as an **optional,
+complementary "at-a-glance" home-monitoring module**.
+
+- Specs: 4" **E Ink Spectra 6** (full colour, **6 colours**), **600×400**, **no
+  touchscreen**, full refresh **~15–19 s**. ESP32-S3R8 (240 MHz, 16 MB flash,
+  8 MB PSRAM), 1250 mAh, **ultra-low standby (92 µA)**, image persists with no
+  power, Grove, microSD, temp/humidity, mic/speaker.
+- **Intended role:** a low-power **bedside / wall panel** that shows a slow, static
+  readout — PRESENT/CLEAR, people count, breathing/heart-rate, and **health
+  trends (24 h / 7 d)** — refreshed every few seconds/minutes, not animated. Fits
+  the RuSense-style **Health mode** (bedside wellness glance) perfectly; e-ink's
+  sunlight readability + multi-day battery + persistent image are the win here.
+- **How it fits:** a thin **RuView API client** (like the Tab5 client, but text/
+  numbers only, slow refresh) polling `/api/v1/*` over WiFi. Since it's an
+  ESP32-S3 with native WiFi/CSI, it could alternatively run RuView node firmware
+  and be a CSI node — but as a panel its job is display, not sensing.
+- **Status: optional, Phase 2+.** Nice-to-have secondary module; never on the
+  critical path. If e-ink + touch is wanted for a primary text dashboard instead,
+  the **mono M5PaperS3** (4.7", 960×540, touch, sub-second partial refresh) is the
+  better candidate — still unsuitable for an animated scope.
