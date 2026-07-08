@@ -116,6 +116,7 @@ See [LICENSE](LICENSE) for attributions.
 ```bash
 # 1) Start a RuView server on simulated data — no hardware needed:
 docker run -p 3000:3000 ruvnet/wifi-densepose      # API at http://<box>:3000
+#    (on the CardputerZero, or any Linux box, use: hub-cardputerzero/install-ruview.sh)
 
 # 2) Build the Tab5 dashboard client (PRIMARY app):
 cd firmware-tab5
