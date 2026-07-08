@@ -11,6 +11,21 @@ the RadarLink state model) — are derived from:
     https://github.com/skizzophrenic/Cardputer-CSI-Human-Detector
     Licensed under the MIT License.
 
+The primary (RuView-based) path builds on and integrates:
+
+    RuView (wifi-densepose)
+    Copyright (c) 2024 rUv
+    https://github.com/ruvnet/ruview
+    Licensed under the MIT License.
+
+    Ragnar / RuSense (integration reference)
+    https://github.com/PierreGode/Ragnar
+    Licensed under the MIT License.
+
+These upstream projects remain under their own MIT licenses; this notice is
+attribution, not a re-license. Their original copyright and permission notices
+apply to any of their code vendored or adapted here.
+
 The original MIT license and copyright notice are retained below and continue
 to apply to those derived portions.
 
