@@ -111,6 +111,26 @@ See [LICENSE](LICENSE) for attributions.
 | — | Nexmon experiment on the CardputerZero (extra illuminator) |
 | — | 3D-printed portable/clamshell enclosure (Bambu P1S) |
 
+## Build & dev (Tab5 client)
+
+```bash
+# 1) Start a RuView server on simulated data — no hardware needed:
+docker run -p 3000:3000 ruvnet/wifi-densepose      # API at http://<box>:3000
+
+# 2) Build the Tab5 dashboard client (PRIMARY app):
+cd firmware-tab5
+cp credentials.ini.example credentials.ini         # set KIT_SSID/PASS + RUVIEW_HOST=<box ip>
+pio run -e tab5 -t upload -t monitor               # RuView dashboard client
+
+# Offline fallback (no server): direct ESP32→Tab5 UART renderer
+pio run -e tab5-direct -t upload -t monitor
+```
+
+The `tab5` env polls the RuView REST API (`ruview_client.h`) and renders
+presence / people / confidence / motion / vitals with a touch CALIBRATE control
+(`src/main_ruview.cpp`). The `tab5-direct` env is the older self-contained
+renderer (`src/main_direct.cpp`).
+
 ## Sources
 
 - https://github.com/ruvnet/ruview · https://github.com/PierreGode/Ragnar
