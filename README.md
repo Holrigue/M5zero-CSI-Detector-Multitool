@@ -58,10 +58,15 @@ radar-multi/
 
 ## Roadmap
 
-The work serves four sub-needs (CSI radar + Linux brain · Tab5 second screen ·
-Cardputer keyboard shared to the Tab5/Zero · optional USB-C portable display) —
-see [`docs/requirements.md`](docs/requirements.md) for the decisions and
-feasibility of each.
+The work serves five sub-needs (CSI radar + Linux brain · Tab5 second screen ·
+Cardputer keyboard shared to the Tab5/Zero · optional USB-C portable display ·
+role-adaptive Tab5 that runs standalone and auto-switches to a 2nd screen when
+the Zero is plugged in) — see [`docs/requirements.md`](docs/requirements.md) for
+the decisions and feasibility of each.
+
+Compute model (don't conflate): the Cardputer (ESP32-S3) and **Tab5 (ESP32-P4 +
+ESP32-C6)** run *firmware*; the **CardputerZero is a Raspberry Pi CM0 running
+Linux** — normal Linux software, no firmware, never a CSI source.
 
 | Phase | What | Need | Hardware | State |
 |-------|------|------|----------|-------|
@@ -71,13 +76,16 @@ feasibility of each.
 | 4 | Tab5: touch interactions (tap blip, calibrate, switch view) | 2a | Tab5 | ✅ done |
 | 5 | Direct Cardputer ↔ Tab5 UART link (no hub) — end-to-end proof | 1,2a | both | ⚙️ ready to bench-test |
 | 6 | Cardputer keyboard → Tab5 (event forwarding) + USB-HID to a host | 3 | Cardputer(+Tab5) | ⏳ next up |
-| 7 | Insert CardputerZero hub; move calib/logging to Linux | 1 | CardputerZero | ⛔ blocked on hw |
-| 8 | Tab5 as a generic Linux second monitor (framebuffer stream over WiFi) | 2b | CardputerZero | ⛔ blocked on hw |
-| 9 | (Optional) Tab5 as a streamed portable display for an external source | 4 | — | ⛔ optional |
-| 10 | (Exploratory) Nexmon CSI for CYW43459 | 1(bonus) | CardputerZero | ⛔ blocked on hw |
-| 11 | 3D-printed stacked enclosure (Bambu P1S) | — | printer | ⛔ blocked on hw |
+| 7 | Tab5 role state machine: standalone PRIMARY (Cardputer-fed) + hub handshake | 5 | Tab5(+Cardputer) | ⏳ next up |
+| 8 | Spike: CSI on the Tab5's own ESP32-C6 → self-sensing standalone mode | 5 | Tab5 | 🔬 to investigate |
+| 9 | Insert CardputerZero hub; move calib/logging to Linux | 1 | CardputerZero | ⛔ blocked on hw |
+| 10 | Zero connected → Tab5 auto-switches to SECONDARY_DISPLAY, full-size map | 5,2a | CardputerZero | ⛔ blocked on hw |
+| 11 | Tab5 as a generic Linux second monitor (framebuffer stream over WiFi) | 2b | CardputerZero | ⛔ blocked on hw |
+| 12 | (Optional) Tab5 as a streamed portable display for an external source | 4 | — | ⛔ optional |
+| 13 | (Exploratory) Nexmon CSI for CYW43459 | 1(bonus) | CardputerZero | ⛔ blocked on hw |
+| 14 | 3D-printed stacked enclosure (Bambu P1S) | — | printer | ⛔ blocked on hw |
 
-Phases 1–6 need only the hardware already in hand.
+Phases 1–8 need only the hardware already in hand.
 
 ## Quick start
 

@@ -81,6 +81,55 @@ client.
 
 ---
 
+## 5. Role-adaptive Tab5: standalone radar, auto-switch to 2nd screen with the Zero
+
+**Decision: support both, with auto-selection.** The Tab5 adapts its role to
+whatever hardware is present, choosing its sensing source and brain automatically.
+
+Device recap (so the compute model is unambiguous): the Cardputer (ESP32-S3) and
+the **Tab5 (ESP32-P4 + ESP32-C6 WiFi)** run *firmware*; the **CardputerZero is a
+Raspberry Pi CM0 running Linux** — normal Linux software, no firmware, never a
+CSI source in Track A.
+
+### Modes (auto-selected at runtime)
+
+| Present | Brain | CSI source | Tab5 role |
+|---------|-------|-----------|-----------|
+| Tab5 only, C6 CSI works | Tab5 | Tab5's own ESP32-C6 | **PRIMARY** — self-contained radar |
+| Tab5 + Cardputer, no Zero | Tab5 | Cardputer over the link | **PRIMARY** — renders remote sensing |
+| Tab5 + CardputerZero | **Zero (Linux)** | Cardputer (via hub) | **SECONDARY_DISPLAY** — full-size scan map |
+
+### Selection priority
+
+1. **Zero connected?** (hub handshake/heartbeat seen on the USB-C/UART link) →
+   `SECONDARY_DISPLAY`: the Zero is the brain and pushes the full-size scanning
+   map; the Tab5 just renders (and sends touch/commands back).
+2. else **C6 self-CSI available?** → `PRIMARY`, sensing on the Tab5's own C6.
+3. else **Cardputer sensor stream on the link?** → `PRIMARY`, rendering that.
+4. else → `NO SOURCE` banner.
+
+### The one real unknown — Tab5 self-CSI (the "if possible" part)
+
+The P4 has no radio; WiFi is the ESP32-C6 co-processor over esp-hosted. The C6
+supports the CSI API in principle, but **CSI must be exposed through
+`esp_wifi_remote`/esp-hosted** — historically limited. This gates mode 1 only.
+Tracked as a spike in [`../research/tab5-c6-csi.md`](../research/tab5-c6-csi.md);
+until it's proven, the Tab5 still delivers a standalone radar via the Cardputer
+(mode 2) and the 2nd-screen mode with the Zero (mode 3).
+
+### Auto-switch mechanism
+
+A lightweight hub **handshake** on the link: the Zero periodically announces
+itself; the Tab5's role state machine flips to `SECONDARY_DISPLAY` on detect and
+back to `PRIMARY` on timeout. Same idea works over USB-C (USB-CDC serial) or
+WiFi. No user action — plug in the Zero and it becomes the brain.
+
+**Maps to:** Tab5 role state machine + hub handshake (developable now, self-CSI
+part gated on the spike); `SECONDARY_DISPLAY` full-size map validated once the
+Zero arrives.
+
+---
+
 ## Consolidated roadmap position
 
 | Need | Now (hardware in hand) | Later (needs hub / hardware) |
@@ -89,6 +138,7 @@ client.
 | 2 Tab5 second screen | 2a dedicated app screen (ph 3–4) | 2b generic Linux monitor |
 | 3 Keyboard bridge | develop HID + event forwarding firmware | validate on the stack |
 | 4 External display | — | optional streamed monitor |
+| 5 Role-adaptive Tab5 | role state machine + Cardputer-fed PRIMARY; C6 self-CSI spike | Zero handshake → SECONDARY_DISPLAY full-size map |
 
 Guiding rule, unchanged: nothing on the "Now" column depends on Nexmon or on the
 CardputerZero. Everything achievable today runs on the Cardputer + Tab5 already
